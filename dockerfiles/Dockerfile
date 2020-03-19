@@ -1,13 +1,16 @@
-FROM golang:1.7.4-alpine
-MAINTAINER Donggeun <odg0318@gmail.com>
+FROM golang:1.13.5-alpine
+LABEL 9to6="ktk0011@gmail.com"
 
 RUN apk add --update git make
 
-ADD . /go/src/github.com/odg0318/aws-ec2-price
+ADD . /aws-ec2-price
+WORKDIR aws-ec2-price
 
-RUN cd /go/src/github.com/odg0318/aws-ec2-price && make build 
+ENV CGO_ENABLED 0
+RUN go install -mod vendor ./cmd/
 
-WORKDIR /go/bin
+FROM alpine:3
+COPY --from=builder /go/bin/aws-ec2-price /bin/aws-ec2-price
 
 EXPOSE 8080
 

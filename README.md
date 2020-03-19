@@ -3,7 +3,7 @@ REST API for searching price of AWS EC2 instance
 
 Installation 
 ------------
-	go get -u github.com/odg0318/aws-ec2-price
+	go get -u github.com/9to6/aws-ec2-price
 
 This package requires some dependancies:
 * [gin-gonic/gin](https://github.com/gin-gonic/gin)
@@ -12,7 +12,7 @@ This package requires some dependancies:
 Usage in golang
 ---------------
 ```go
-import github.com/odg0318/aws-ec2-price
+import github.com/9to6/aws-ec2-price
 
 pricing, err := price.NewPricing()
 if err != nil {
@@ -42,7 +42,7 @@ Default port is 8080.
 
 Run with Docker
 ---------------
-	docker run -p 8080:8080 -d guri/aws-ec2-price
+	docker run -p 8080:8080 -d 9to5/aws-ec2-price
 
 REST APIs
 ---------

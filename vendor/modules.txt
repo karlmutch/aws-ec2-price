@@ -1,0 +1,29 @@
+# github.com/davecgh/go-spew v1.1.0
+github.com/davecgh/go-spew/spew
+# github.com/gin-gonic/gin v1.1.4
+github.com/gin-gonic/gin
+github.com/gin-gonic/gin/binding
+github.com/gin-gonic/gin/render
+# github.com/golang/protobuf v0.0.0-20161117033126-8ee79997227b
+github.com/golang/protobuf/proto
+# github.com/manucorporat/sse v0.0.0-20160126180136-ee05b128a739
+github.com/manucorporat/sse
+# github.com/mattn/go-isatty v0.0.0-20170209175615-281032e84ae0
+github.com/mattn/go-isatty
+# github.com/odg0318/aws-ec2-price v0.0.0-20180525034951-a79dc4accae7
+github.com/odg0318/aws-ec2-price/pkg/price
+github.com/odg0318/aws-ec2-price/pkg/rest
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
+# github.com/stretchr/testify v1.5.1
+github.com/stretchr/testify/assert
+# github.com/urfave/cli v1.19.2-0.20170110045714-8ef3805c9de2
+github.com/urfave/cli
+# golang.org/x/net v0.0.0-20170215215908-b4690f45fa1c
+golang.org/x/net/context
+# golang.org/x/sys v0.0.0-20170213225739-e24f485414ae
+golang.org/x/sys/unix
+# gopkg.in/go-playground/validator.v8 v8.18.1
+gopkg.in/go-playground/validator.v8
+# gopkg.in/yaml.v2 v2.2.2
+gopkg.in/yaml.v2

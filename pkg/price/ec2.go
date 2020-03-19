@@ -8,10 +8,13 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	"aws-ec2-price/pkg/price/version"
 )
 
 var (
 	URL = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
+	URL_VERSION = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/index.json"
 
 	HOURLY_TERM_CODE = "JRTCKXETXF"
 	RATE_CODE        = "6YS6EN2CT7"
@@ -24,7 +27,9 @@ var (
 	REQUIRED_USAGE          = "BoxUsage:*"
 	REQUIRED_PREINSTALLEDSW = "NA"
 
-	CACHED_PRICING = CachedEc2Pricing{}
+	CACHED_PRICING = CachedEc2Pricing {
+		infos: map[string]*ec2PricingInfo{},
+	}
 )
 
 type ec2Pricing struct {
@@ -143,38 +148,74 @@ func (ep *Ec2Product) isValid() bool {
 }
 
 type CachedEc2Pricing struct {
+	infos map[string]*ec2PricingInfo
+}
+
+type ec2PricingInfo struct {
 	pricing       *ec2Pricing
 	lastCheckTime time.Time
 }
 
-func (c *CachedEc2Pricing) isExpired() bool {
-	return time.Since(c.lastCheckTime) > time.Duration(24*time.Hour)
-}
-
-func (c *CachedEc2Pricing) update(pricing *ec2Pricing) {
+func (c *ec2PricingInfo) Update(pricing *ec2Pricing) {
 	c.pricing = pricing
-	c.lastCheckTime = time.Now()
 }
 
-func NewPricing() (*ec2Pricing, error) {
-	if CACHED_PRICING.isExpired() == false {
-		return CACHED_PRICING.pricing, nil
+func (c *CachedEc2Pricing) isExpired(region string) bool {
+	if val, ok := c.infos[region]; ok {
+		return time.Since(val.lastCheckTime) > time.Duration(24*time.Hour)
+	}
+	return true
+}
+
+func (c *CachedEc2Pricing) update(region string, pricing *ec2Pricing) {
+	if val, ok := c.infos[region]; ok {
+		val.Update(pricing)
+	} else {
+		e := &ec2PricingInfo {
+			pricing: pricing,
+			lastCheckTime: time.Now(),
+		}
+		c.infos[region] = e
+	}
+}
+
+func NewPricing(region string) (*ec2Pricing, error) {
+	if CACHED_PRICING.isExpired(region) == false {
+		return CACHED_PRICING.infos[region].pricing, nil
 	}
 
+	url := string(URL)
 	client := &http.Client{}
+	{
+		r, err := client.Get(URL_VERSION)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Body.Close()
 
-	r, err := client.Get(URL)
-	if err != nil {
-		return nil, err
+		versions := &version.Version{}
+		if err := json.NewDecoder(r.Body).Decode(versions); err != nil {
+			return nil, err
+		}
+
+		fmt.Println(versions.CurrentVersion)
+		url = fmt.Sprintf("https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/%s/%s/index.json", versions.CurrentVersion, region)
+		fmt.Println(url)
 	}
-	defer r.Body.Close()
 
-	pricing := &ec2Pricing{}
-	if err := json.NewDecoder(r.Body).Decode(pricing); err != nil {
-		return nil, err
+	{
+		r, err := client.Get(url)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Body.Close()
+
+		pricing := &ec2Pricing{}
+		if err := json.NewDecoder(r.Body).Decode(pricing); err != nil {
+			return nil, err
+		}
+
+		CACHED_PRICING.update(region, pricing)
+	  return pricing, err
 	}
-
-	CACHED_PRICING.update(pricing)
-
-	return pricing, err
 }
