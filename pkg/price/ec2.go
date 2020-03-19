@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"aws-ec2-price/pkg/price/version"
+	"github.com/9to6/aws-ec2-price/pkg/price/version"
 )
 
 var (
