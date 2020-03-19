@@ -9,7 +9,7 @@ func getEc2PriceHandler(context *gin.Context) {
 	region := context.Param("region")
 	instanceType := context.Param("instance_type")
 
-	pricing, err := price.NewPricing()
+	pricing, err := price.NewPricing(region)
 	if err != nil {
 		context.Error(err)
 		errorHandler(context)

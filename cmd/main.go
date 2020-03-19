@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/odg0318/aws-ec2-price/pkg/rest"
+	"aws-ec2-price/pkg/rest"
 	"github.com/urfave/cli"
 )
 
