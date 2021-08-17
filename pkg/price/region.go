@@ -1,7 +1,7 @@
 package price
 
 var (
-	REGIONS = map[string]string{
+	Regions = map[string]string{
 		"us-east-1":      "US East (N. Virginia)",
 		"us-east-2":      "US East (Ohio)",
 		"us-west-1":      "US West (N. California)",

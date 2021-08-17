@@ -21,14 +21,15 @@ func main() {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		port := c.Int("port")
+		port := fmt.Sprintf(":%d", c.Int("port"))
 
 		r := rest.GetRouter()
-		r.Run(fmt.Sprintf(":%d", port))
+		r.Run(port)
 		return nil
 	}
 
 	if err := app.Run(os.Args); err != nil {
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 }

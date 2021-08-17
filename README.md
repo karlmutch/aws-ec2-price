@@ -1,7 +1,9 @@
 # aws-ec2-price
-REST API for searching price of AWS EC2 instance
 
-Installation 
+Go package, and REST API for searching the prices of AWS EC2 instances
+
+Installation
+
 ------------
 	go get -u github.com/karlmutch/aws-ec2-price
 
@@ -12,7 +14,7 @@ This package requires some dependancies:
 Usage in golang
 ---------------
 ```go
-import github.com/karlmutch/aws-ec2-price
+import "github.com/karlmutch/aws-ec2-price"
 
 pricing, err := price.NewPricing("us-east-1")
 if err != nil {
@@ -33,6 +35,12 @@ if err != nil {
 
 println(instance)
 ```
+
+
+Build
+-----
+
+make all
 
 Run 
 ---

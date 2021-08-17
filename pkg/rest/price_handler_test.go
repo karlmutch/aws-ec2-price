@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var ()
-
 func TestGetEc2PriceHandler(t *testing.T) {
 	r := GetRouter()
 

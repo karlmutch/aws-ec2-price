@@ -12,22 +12,24 @@ import (
 	"github.com/karlmutch/aws-ec2-price/pkg/price/version"
 )
 
+const (
+	currentOfferURL  = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
+	offerVersionsURL = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/index.json"
+
+	hourlyTermCode = "JRTCKXETXF"
+	rateCode       = "6YS6EN2CT7"
+
+	requiredTerm           = "OnDemand"
+	requiredTenancy        = "Shared"
+	requiredProductFamily  = "Compute Instance"
+	requiredOs             = "Linux"
+	requiredLicenseModel   = "No License required"
+	requiredUsage          = "BoxUsage:*"
+	requiredPreinstalledSw = "NA"
+)
+
 var (
-	URL         = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
-	URL_VERSION = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/index.json"
-
-	HOURLY_TERM_CODE = "JRTCKXETXF"
-	RATE_CODE        = "6YS6EN2CT7"
-
-	REQUIRED_TERM           = "OnDemand"
-	REQUIRED_TENANCY        = "Shared"
-	REQUIRED_PRODUCT_FAMILY = "Compute Instance"
-	REQUIRED_OS             = "Linux"
-	REQUIRED_LICENSE_MODEL  = "No License required"
-	REQUIRED_USAGE          = "BoxUsage:*"
-	REQUIRED_PREINSTALLEDSW = "NA"
-
-	CACHED_PRICING = CachedEc2Pricing{
+	cachedPricing = cachedEc2Pricing{
 		infos: map[string]*ec2PricingInfo{},
 	}
 )
@@ -43,25 +45,47 @@ type ec2Pricing struct {
 	} `json:terms`
 }
 
-func (ec *ec2Pricing) GetInstances(region string) ([]*Instance, error) {
-	var instances []*Instance
+// NewPricing will refresh pricing for the indiciated AWS region and will return the
+// appropriate pricing table for the region that can then be used by the client
+//
+func NewPricing(region string) (pricing *ec2Pricing, err error) {
+	if !cachedPricing.isExpired(region) {
+		return cachedPricing.infos[region].pricing, nil
+	}
+
+	if pricing, err = refreshPricing(region); err != nil {
+		return nil, err
+	}
+
+	cachedPricing.update(region, pricing)
+
+	return pricing, nil
+}
+
+// GetInstances will retrieve all instance details for the specified region.  The receiver is
+// initialized using a single region which will cause a cache to be refresh for that region,
+// however because the cache is shared the client can request information for any region
+// that might be present.
+//
+func (ec *ec2Pricing) GetInstances(region string) (instances []*Instance, err error) {
+	instances = []*Instance{}
 	for _, product := range ec.Products {
-		if product.isValid() == false {
+		if !product.isValid() {
 			continue
 		}
 
-		if product.isValidRegion(region) == false {
+		if !product.isValidRegion(region) {
 			continue
 		}
 
-		h := fmt.Sprintf("%s.%s", product.Sku, HOURLY_TERM_CODE)
-		r := fmt.Sprintf("%s.%s.%s", product.Sku, HOURLY_TERM_CODE, RATE_CODE)
+		h := fmt.Sprintf("%s.%s", product.Sku, hourlyTermCode)
+		r := fmt.Sprintf("%s.%s.%s", product.Sku, hourlyTermCode, rateCode)
 
-		usd := ec.Terms[REQUIRED_TERM][product.Sku][h].PriceDimensions[r].PricePerUnit.USD
+		usd := ec.Terms[requiredTerm][product.Sku][h].PriceDimensions[r].PricePerUnit.USD
 
 		price, err := strconv.ParseFloat(usd, 64)
 		if err != nil {
-			return nil, errors.New("usd could not be parsed.")
+			return nil, errors.New("usd could not be parsed")
 		}
 
 		instances = append(instances, &Instance{
@@ -74,7 +98,12 @@ func (ec *ec2Pricing) GetInstances(region string) ([]*Instance, error) {
 	return instances, nil
 }
 
-func (ec *ec2Pricing) GetInstance(region string, instanceType string) (*Instance, error) {
+// GetInstance will retrieve a specific instances details for the specified region.  The receiver is
+// initialized using a single region which will cause a cache to be refresh for that region,
+// however because the cache is shared the client can request information for any region
+// that might be present.
+//
+func (ec *ec2Pricing) GetInstance(region string, instanceType string) (instance *Instance, err error) {
 	instances, err := ec.GetInstances(region)
 	if err != nil {
 		return nil, err
@@ -88,7 +117,7 @@ func (ec *ec2Pricing) GetInstance(region string, instanceType string) (*Instance
 		return instance, nil
 	}
 
-	return nil, errors.New("there is no matched instance.")
+	return nil, errors.New("supplied instance not recognized")
 }
 
 type Ec2Product struct {
@@ -110,7 +139,7 @@ func (ep *Ec2Product) InstanceType() string {
 }
 
 func (ep *Ec2Product) isValidRegion(region string) bool {
-	if r, ok := REGIONS[region]; ok == true {
+	if r, ok := Regions[region]; ok {
 		return ep.Attributes.Location == r
 	}
 
@@ -118,27 +147,27 @@ func (ep *Ec2Product) isValidRegion(region string) bool {
 }
 
 func (ep *Ec2Product) isValid() bool {
-	if ep.ProductFamily != REQUIRED_PRODUCT_FAMILY {
+	if ep.ProductFamily != requiredProductFamily {
 		return false
 	}
 
-	if ep.Attributes.OperatingSystem != REQUIRED_OS {
+	if ep.Attributes.OperatingSystem != requiredOs {
 		return false
 	}
 
-	if ep.Attributes.LicenseModel != REQUIRED_LICENSE_MODEL {
+	if ep.Attributes.LicenseModel != requiredLicenseModel {
 		return false
 	}
 
-	if ep.Attributes.Tenancy != REQUIRED_TENANCY {
+	if ep.Attributes.Tenancy != requiredTenancy {
 		return false
 	}
 
-	if ep.Attributes.PreInstalledSw != REQUIRED_PREINSTALLEDSW {
+	if ep.Attributes.PreInstalledSw != requiredPreinstalledSw {
 		return false
 	}
 
-	matched, err := regexp.MatchString(REQUIRED_USAGE, ep.Attributes.UsageType)
+	matched, err := regexp.MatchString(requiredUsage, ep.Attributes.UsageType)
 	if err != nil || matched == false {
 		return false
 	}
@@ -147,7 +176,7 @@ func (ep *Ec2Product) isValid() bool {
 
 }
 
-type CachedEc2Pricing struct {
+type cachedEc2Pricing struct {
 	infos map[string]*ec2PricingInfo
 }
 
@@ -156,62 +185,57 @@ type ec2PricingInfo struct {
 	lastCheckTime time.Time
 }
 
-func (c *ec2PricingInfo) Update(pricing *ec2Pricing) {
+func (c *ec2PricingInfo) updateInstance(pricing *ec2Pricing) {
 	c.pricing = pricing
 }
 
-func (c *CachedEc2Pricing) isExpired(region string) bool {
+func (c *cachedEc2Pricing) isExpired(region string) bool {
 	if val, ok := c.infos[region]; ok {
 		return time.Since(val.lastCheckTime) > time.Duration(24*time.Hour)
 	}
 	return true
 }
 
-func (c *CachedEc2Pricing) update(region string, pricing *ec2Pricing) {
+func (c *cachedEc2Pricing) update(region string, pricing *ec2Pricing) {
 	if val, ok := c.infos[region]; ok {
-		val.Update(pricing)
-	} else {
-		e := &ec2PricingInfo{
-			pricing:       pricing,
-			lastCheckTime: time.Now(),
-		}
-		c.infos[region] = e
+		val.updateInstance(pricing)
+		return
 	}
+	e := &ec2PricingInfo{
+		pricing:       pricing,
+		lastCheckTime: time.Now(),
+	}
+	c.infos[region] = e
 }
 
-func NewPricing(region string) (*ec2Pricing, error) {
-	if CACHED_PRICING.isExpired(region) == false {
-		return CACHED_PRICING.infos[region].pricing, nil
-	}
-
+func refreshPricing(region string) (pricing *ec2Pricing, err error) {
 	client := &http.Client{}
 
-	r, err := client.Get(URL_VERSION)
+	// Obtain a catalog of the known versions of offer documents
+	// and explicitly select the current one
+	versionResp, err := client.Get(offerVersionsURL)
 	if err != nil {
 		return nil, err
 	}
-	defer r.Body.Close()
+	defer versionResp.Body.Close()
 
 	versions := &version.Version{}
-	if err := json.NewDecoder(r.Body).Decode(versions); err != nil {
+	if err := json.NewDecoder(versionResp.Body).Decode(versions); err != nil {
 		return nil, err
 	}
 
-	fmt.Println(versions.CurrentVersion)
+	// Get the latest version of the offer document for the chosen region
 	url := fmt.Sprintf("https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/%s/%s/index.json", versions.CurrentVersion, region)
-	fmt.Println(url)
 
-	r, err = client.Get(url)
+	currentResp, err := client.Get(url)
 	if err != nil {
 		return nil, err
 	}
-	defer r.Body.Close()
+	defer currentResp.Body.Close()
 
-	pricing := &ec2Pricing{}
-	if err := json.NewDecoder(r.Body).Decode(pricing); err != nil {
+	pricing = &ec2Pricing{}
+	if err := json.NewDecoder(currentResp.Body).Decode(pricing); err != nil {
 		return nil, err
 	}
-
-	CACHED_PRICING.update(region, pricing)
-	return pricing, err
+	return pricing, nil
 }
