@@ -8,7 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/9to6/aws-ec2-price/pkg/price"
+	"github.com/karlmutch/aws-ec2-price/pkg/price"
+
 	"github.com/stretchr/testify/assert"
 )
 

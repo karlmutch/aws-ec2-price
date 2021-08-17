@@ -1,8 +1,9 @@
 package rest
 
 import (
+	"github.com/karlmutch/aws-ec2-price/pkg/price"
+
 	"github.com/gin-gonic/gin"
-	"github.com/9to6/aws-ec2-price/pkg/price"
 )
 
 func getEc2PricesHandler(context *gin.Context) {

@@ -1,5 +1,4 @@
 FROM golang:1.13.5-alpine as builder
-LABEL 9to6="ktk0011@gmail.com"
 
 RUN apk add --update git make
 

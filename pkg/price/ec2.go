@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/9to6/aws-ec2-price/pkg/price/version"
+	"github.com/karlmutch/aws-ec2-price/pkg/price/version"
 )
 
 var (
-	URL = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
+	URL         = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
 	URL_VERSION = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/index.json"
 
 	HOURLY_TERM_CODE = "JRTCKXETXF"
@@ -27,7 +27,7 @@ var (
 	REQUIRED_USAGE          = "BoxUsage:*"
 	REQUIRED_PREINSTALLEDSW = "NA"
 
-	CACHED_PRICING = CachedEc2Pricing {
+	CACHED_PRICING = CachedEc2Pricing{
 		infos: map[string]*ec2PricingInfo{},
 	}
 )
@@ -171,8 +171,8 @@ func (c *CachedEc2Pricing) update(region string, pricing *ec2Pricing) {
 	if val, ok := c.infos[region]; ok {
 		val.Update(pricing)
 	} else {
-		e := &ec2PricingInfo {
-			pricing: pricing,
+		e := &ec2PricingInfo{
+			pricing:       pricing,
 			lastCheckTime: time.Now(),
 		}
 		c.infos[region] = e
@@ -184,38 +184,34 @@ func NewPricing(region string) (*ec2Pricing, error) {
 		return CACHED_PRICING.infos[region].pricing, nil
 	}
 
-	url := string(URL)
 	client := &http.Client{}
-	{
-		r, err := client.Get(URL_VERSION)
-		if err != nil {
-			return nil, err
-		}
-		defer r.Body.Close()
 
-		versions := &version.Version{}
-		if err := json.NewDecoder(r.Body).Decode(versions); err != nil {
-			return nil, err
-		}
+	r, err := client.Get(URL_VERSION)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Body.Close()
 
-		fmt.Println(versions.CurrentVersion)
-		url = fmt.Sprintf("https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/%s/%s/index.json", versions.CurrentVersion, region)
-		fmt.Println(url)
+	versions := &version.Version{}
+	if err := json.NewDecoder(r.Body).Decode(versions); err != nil {
+		return nil, err
 	}
 
-	{
-		r, err := client.Get(url)
-		if err != nil {
-			return nil, err
-		}
-		defer r.Body.Close()
+	fmt.Println(versions.CurrentVersion)
+	url := fmt.Sprintf("https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/%s/%s/index.json", versions.CurrentVersion, region)
+	fmt.Println(url)
 
-		pricing := &ec2Pricing{}
-		if err := json.NewDecoder(r.Body).Decode(pricing); err != nil {
-			return nil, err
-		}
-
-		CACHED_PRICING.update(region, pricing)
-	  return pricing, err
+	r, err = client.Get(url)
+	if err != nil {
+		return nil, err
 	}
+	defer r.Body.Close()
+
+	pricing := &ec2Pricing{}
+	if err := json.NewDecoder(r.Body).Decode(pricing); err != nil {
+		return nil, err
+	}
+
+	CACHED_PRICING.update(region, pricing)
+	return pricing, err
 }

@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/9to6/aws-ec2-price/pkg/rest"
+	"github.com/karlmutch/aws-ec2-price/pkg/rest"
+
 	"github.com/urfave/cli"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "ec2-instance-price"
-	app.Version = "0.0.2"
+	app.Version = "0.0.3"
 	app.Flags = []cli.Flag{
 		cli.IntFlag{
 			Name:   "port",
